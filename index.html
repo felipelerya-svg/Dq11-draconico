@@ -75,7 +75,7 @@ button,input,select{font:inherit;color:inherit}
 .nums b{color:var(--gold);font-family:var(--px);font-weight:400;font-size:15px}
 .track{position:relative;height:12px;background:var(--fld);border:1px solid var(--line);border-radius:2px;margin:12px 0 4px 30px}
 .band{position:absolute;top:0;bottom:0;background:rgba(255,217,90,.32);border-left:2px solid var(--gold);border-right:2px solid var(--gold)}
-.cap{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1px;background:var(--bad)}
+.capmk{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1px;background:var(--bad)}
 .needle{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px #000}
 .scale{display:flex;justify-content:space-between;margin-left:30px;font:11px var(--px);color:var(--mute)}
 .mstat{margin:8px 0 0 30px;font-size:13px}
@@ -138,6 +138,8 @@ tr.cur td{color:var(--gold)}
 .lrow>div{min-width:0}
 details.win>summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
 details.late>summary{cursor:pointer;min-height:36px;display:flex;align-items:center;color:var(--gold);font-size:14px}
+details.win>summary::after,details.late>summary::after,details.how>summary::after{content:'▸';margin-left:auto;padding-left:12px;color:var(--gold);font-size:14px;letter-spacing:0}
+details.win[open]>summary::after,details.late[open]>summary::after,details.how[open]>summary::after{content:'▾'}
 .sub{margin:10px 0 2px;font-size:13px;color:var(--mute)}
 .sub b{color:var(--ink)}
 .rules li{margin:6px 0}
@@ -229,6 +231,19 @@ button.mch{cursor:pointer;touch-action:manipulation}
 details.how>summary{cursor:pointer;min-height:36px;display:flex;align-items:center;color:var(--gold);font-size:14px;margin-top:6px}
 .tab,.chip,.mch,.ichip{-webkit-user-select:none;user-select:none}
 @media (max-width:340px){.tab{font-size:10.5px}}
+.toci{display:grid;grid-template-columns:30px minmax(0,1fr) auto auto;gap:2px 8px;align-items:center;width:100%;min-height:44px;padding:6px 8px;margin:0;border:0;border-top:1px solid var(--line);background:transparent;color:var(--ink);text-align:left;cursor:pointer;font-size:14px;touch-action:manipulation}
+.toci .tn{font:15px var(--px);color:var(--gold);text-align:center}
+.toci .tnm{overflow-wrap:anywhere}
+.toci .tmt{font:13px var(--px);color:var(--mute);white-space:nowrap}
+.toci .tst{font-size:12px;white-space:nowrap;min-width:56px;text-align:right;color:var(--mute)}
+.toci .tst.ok{color:var(--ok)}.toci .tst.low{color:var(--warn)}.toci .tst.cap{color:var(--bad)}
+.toci.here{background:var(--fld);box-shadow:inset 3px 0 0 var(--gold)}
+.toci:active{background:var(--line)}
+.toci .badge{margin-left:4px;vertical-align:middle}
+.lnk{background:none;border:0;color:var(--gold);font:inherit;font-weight:600;text-decoration:underline;padding:6px 4px;margin:-6px -4px;cursor:pointer;touch-action:manipulation}
+.flash{animation:flashgold 1.4s ease-out}
+@keyframes flashgold{0%{box-shadow:0 0 0 3px var(--gold),inset 0 0 0 2px var(--win-b)}100%{box-shadow:0 0 0 0 transparent,inset 0 0 0 2px var(--win-b)}}
+@media (prefers-reduced-motion:reduce){.flash{animation:none;outline:3px solid var(--gold);outline-offset:2px}}
 </style>
 </head>
 <body>
@@ -243,7 +258,7 @@ details.how>summary{cursor:pointer;min-height:36px;display:flex;align-items:cent
 'use strict';
 
 /* ---------- Dados ---------- */
-var KEY='dq11-hud-v1', MAXL=80;
+var KEY='dq11-hud-v1', MAXL=80, VER='2026-11-05 (2)';
 var TABS=[['regua','Níveis'],['receitas','Receitas'],['materiais','Materiais'],['bosses','Bosses'],['combate','Combate'],['pacote','Ajustes']];
 var T1='https://steamcommunity.com/app/742120/discussions/0/1739968490558609672';
 var T2='https://steamcommunity.com/app/742120/discussions/0/3338745825891971193';
@@ -345,15 +360,14 @@ var DELTA={easy:-1,tight:0,allies:2,hero:2};
 
 var CHK=[
  'Nível dentro da faixa do próximo marco e, se for chefe-chave, abaixo do teto',
- 'Herói com HP cheio, na reserva ou com cura sobrando (Herói cai = game over)',
- 'Itens de reviver e de cura contados, porque não há loja para repor',
- 'Sono e debuffs testados nos monstros comuns da região; o boss conta como resistente até provar o contrário',
+ 'Herói com HP cheio e cura sobrando (com a opção do Herói, ele cair encerra a luta)',
+ 'Itens de reviver e de cura contados antes da luta',
  'Receitas da região conferidas e equipamento novo fabricado',
  'Jogo salvo em um arquivo separado antes da luta'
 ];
 
 var OPTS=[
- ['No Shopping','on','Equipamento vem de receitas, baús e drops.'],
+ ['No Shopping','off','Fecha as lojas: sem comprar nem vender. Equipamento e itens só por forja, baús e drops.'],
  ['Reduced Experience from Easy Fights','on','Trava anti-grind; os drops continuam.'],
  ['All Enemies Are Super Strong','on','Principal fonte de dificuldade.'],
  ['Party Wiped Out if Protagonist Perishes','on','Herói caído encerra a luta.'],
@@ -497,7 +511,7 @@ var MAT=[{"n":"Copper Ore","l":["Sold at the Emerald Coast campsite, Hotto and H
 var RCP=[["Fist Forays Into Forging","Bronze Sword",0.5,"bronze-sword",[[0,2],[1,1]]],["Fist Forays Into Forging","Divine Dagger",0.5,"divine-dagger",[[0,1],[2,1]]],["I Love Iron Arms","Iron Broadsword",1.0,"iron-broadsword",[[3,2],[0,1]]],["I Love Iron Arms","Cast-Iron Claymore",1.0,"cast-iron-claymore",[[3,3],[0,1]]],["So You Want to Be a Witch","Lamp Post",1.0,"lamp-post",[[4,1],[5,1]]],["So You Want to Be a Witch","Wizard's Staff",1.0,"wizard-s-staff",[[6,1],[7,1],[5,1]]],["So You Want to Be a Witch","Tricky Turban",1.0,"tricky-turban",[[8,2],[9,1],[10,1]]],["So You Want to Be a Witch","Fizzle-Retardant Blouse",1.0,"fizzle-retardant-blouse",[[8,1],[10,1],[11,1]]],["So You Want to Be a Witch","Enchantress's Gloves",1.0,"enchantress-s-gloves",[[8,1],[9,1],[12,1]]],["A Slender Sword of Solid Silver","Silver Rapier",1.0,"silver-rapier",[[13,2],[4,1],[14,1]]],["Cutting-Edge","Broader Sword",1.0,"broader-sword",[[3,3],[15,1]]],["Cutting-Edge","Battle Fork",1.0,"battle-fork",[[4,2],[16,1],[17,1]]],["Cutting-Edge","Rose Whip",1.0,"rosewhip",[[6,1],[10,1],[18,1]]],["Smithing with Steel","Steel Broadsword",1.5,"steel-broadsword",[[13,2],[3,1],[19,1]]],["Smithing with Steel","Soarin' Steel",1.5,"soarin-steel",[[13,2],[3,2],[20,2]]],["Smithing with Steel","Steel Shield",1.5,"steel-shield",[[13,2],[3,1],[14,2]]],["Smithing with Steel","Steel Helmet",1.5,"steel-helmet",[[13,3],[3,2],[21,2]]],["Smithing with Steel","Full Plate Armour",1.5,"full-plate-armor",[[13,3],[3,1],[22,2]]],["Building Butterfly Bric-a-Brac","Batterfly Knife",1.5,"batterfly-knife",[[13,2],[23,1],[12,1]]],["Building Butterfly Bric-a-Brac","Malleable Mask",1.5,"malleable-mask",[[13,2],[12,2],[10,1]]],["Your Crafting Career Starts Here","Jolly Brolly",1.5,"jolly-brolly",[[16,2],[24,1],[25,1]]],["Your Crafting Career Starts Here","Coral Hairpin",1.5,"coral-hairpin",[[26,1],[27,1]]],["Your Crafting Career Starts Here","Utility Belt",1.5,"utility-belt",[[28,2],[29,1],[30,1]]],["Building a Blade of Blistering Brutality","Cautery Sword",1.5,"cautery-sword",[[13,2],[31,1],[32,1]]],["Lashings of Class","Queen's Whip",2.0,"queen-s-whip",[[33,2],[10,1],[34,1]]],["Electrifying Equipment","Lightning Staff",2.0,"lightning-staff",[[6,2],[35,1],[21,1]]],["Electrifying Equipment","Lightning Lance",2.0,"lightning-lance",[[36,3],[35,1],[37,1]]],["Build Better Birds' Feet","Crow's Claws",2.0,"crow-s-claws",[[38,1],[39,2],[40,1]]],["Dragony Designs","Wyvern Wand",1.5,"wyvern-wand",[[6,2],[41,1],[19,1]]],["Dragony Designs","Dragontail Whip",2.0,"dragontail-whip",[[42,1],[41,1],[34,1]]],["Knick-Knacks for Nifty Nickers","Bloodletter",2.0,"bloodletter",[[38,2],[42,1],[32,1]]],["Knick-Knacks for Nifty Nickers","Swordbreaker",2.0,"sword-breaker",[[13,2],[36,2],[40,2]]],["Knick-Knacks for Nifty Nickers","Thief's Turban",1.5,"thief-s-turban",[[43,1],[10,1],[15,1]]],["Knick-Knacks for Nifty Nickers","Robber Gloves",1.0,"robber-gloves",[[44,2],[45,1],[46,1]]],["Knick-Knacks for Nifty Nickers","Gloomy Gloves",2.0,"gloomy-gloves",[[44,1],[43,1]]],["Making the Magic Happen","Hocus Locus",2.0,"hocus-locus",[[6,2],[25,2],[17,1]]],["Making the Magic Happen","Hocus Hat",2.0,"hocus-hat",[[47,2],[48,2],[49,1]]],["Making the Magic Happen","Fizzle-Retardant Suit",2.0,"fizzle-retardant-suit",[[50,2],[11,1],[51,1]]],["Divine Designs","Seraphic Sceptre",2.0,"seraphic-sceptre",[[6,2],[52,3],[17,1]]],["Divine Designs","Angel's Sandals",2.0,"angel-s-sandals",[[29,2],[52,3],[39,2]]],["Supercool Kit","Winter's Wing",2.0,"winter-s-wing",[[53,2],[54,2],[38,2]]],["Supercool Kit","Shiverstick",2.0,"shiverstick",[[53,2],[55,1],[25,1]]],["Platinum Power","Platinum Sword",2.0,"platinum-sword",[[38,2],[44,2],[18,2]]],["Platinum Power","Platinum Powersword",2.0,"platinum-powersword",[[38,3],[36,2],[33,2]]],["Platinum Power","Platinum Lance",2.0,"platinum-lance",[[38,3],[13,2],[19,1]]],["Platinum Power","Platinum Claws",2.0,"platinum-claws",[[38,2],[3,2],[17,1]]],["How to Outdo the Undead","Zombie Slayer",2.0,"zombie-slayer",[[38,2],[56,1],[57,1]]],["The Devil's in the Details","Demonsbane",2.0,"demonsbane",[[38,3],[56,2]]],["The Devil's in the Details","Demon Spear",2.5,"demon-spear",[[38,2],[58,2],[19,1]]],["The Devil's in the Details","Demon's Whip",2.0,"demon-whip",[[38,2],[30,3],[55,2]]],["The Devil's in the Details","Devil's Tail",2.0,"devil-s-tail",[[30,1],[58,2]]],["A Recipe Book of Regal Regalia","King Axe",2.0,"king-axe",[[36,3],[59,3],[4,2]]],["A Recipe Book of Regal Regalia","King's Coat",2.5,"king-s-coat",[[50,3],[60,1],[61,1]]],["A Recipe Book of Regal Regalia","Queen's Robe",2.5,"queen-s-robe",[[50,3],[60,1],[62,1]]],["More Dragony Designs","Dragonsbane",2.5,"dragonsbane",[[63,2],[42,2],[32,2]]],["More Dragony Designs","Wyrmfang",2.5,"wyrmfang",[[63,3],[41,2],[42,2]]],["More Dragony Designs","Dragon Shield",2.0,"dragon-shield",[[63,2],[42,1],[17,1]]],["More Dragony Designs","Dragon Mail",2.0,"dragon-mail",[[63,3],[41,2],[32,2]]],["The Mothmask Prophecies","Dread Dagger",2.5,"dread-dagger",[[38,2],[23,2],[43,1]]],["The Mothmask Prophecies","Papillon Mask",2.5,"papillon-mask",[[63,2],[12,1],[23,1],[10,2]]],["Snowfield Styles","Fenrir Fang",3.0,"fenrir-fang",[[63,2],[64,2],[40,1],[61,1]]],["Snowfield Styles","Ice Claws",2.5,"ice-claws",[[13,2],[64,2],[53,2],[61,1]]],["Snowfield Styles","Avalanche Axe",2.5,"avalanche-axe",[[63,3],[64,2],[54,2],[61,1]]],["Fine Fashions for Philosophers","Sage's Staff",2.5,"sage-s-staff",[[58,2],[65,3],[2,3],[17,3]]],["Fine Fashions for Philosophers","Scholar's Cap",2.5,"scholar-s-cap",[[66,3],[19,1],[29,2]]],["Fine Fashions for Philosophers","Thinking Cap",2.5,"thinking-cap",[[36,3],[38,2],[67,2],[65,2]]],["Fine Fashions for Philosophers","Guru's Gloves",2.5,"guru-s-gloves",[[41,2],[65,1],[68,1]]],["Making the Most of Mythril","Fizzle Foil",2.5,"fizzle-foil",[[63,2],[10,2],[58,2],[32,2]]],["Making the Most of Mythril","Mythril Helm",2.5,"mythril-helm",[[63,2],[42,2],[14,2],[17,1]]],["Making the Most of Mythril","Dancer's Mail",2.5,"dancer-s-mail",[[63,3],[45,2],[18,2]]],["Secrets of the Sunken Spirit","Full Fathom Fork",2.5,"full-fathom-fork",[[69,3],[26,2],[70,1],[71,2]]],["Even More Dragony Designs","Red Dragon Rod",3.0,"red-dragon-rod",[[72,2],[41,2],[62,1],[31,2]]],["Even More Dragony Designs","Wyrmwand",3.0,"wyrmwand",[[72,2],[62,2],[42,2],[25,2]]],["Things to Do with Metal Goo","Metal Goomerang",3.0,"metal-goomerang",[[73,1],[74,1],[71,2],[48,2]]],["Things to Do with Metal Goo","Metal Gooreatsword",3.0,"metal-gooreatsword",[[73,1],[74,1],[27,2],[69,1]]],["Things to Do with Metal Goo","Metal Slime Armour",3.0,"metal-slime-armor",[[73,1],[74,1],[69,2],[75,2]]],["Things to Do with Metal Goo","Metal Slime Helm",3.0,"metal-slime-helm",[[73,1],[74,1],[63,2],[33,2]]],["Things to Do with Metal Goo","Metal Slime Shield",3.0,"metal-slime-shield",[[73,1],[74,1],[20,2],[76,2]]],["Things to Do with Metal Goo","Metal Slime Spear",3.0,"metal-slime-spear",[[73,1],[74,1],[14,2],[40,2]]],["Things to Do with Metal Goo","Metal Slime Sword",3.0,"metal-slime-sword",[[73,1],[74,1],[42,2],[20,2]]],["In Fine Fettle with Liquid Metal","Liquid Metal Armour",3.5,"liquid-metal-armor",[[73,1],[77,1],[42,2],[38,2]]],["In Fine Fettle with Liquid Metal","Liquid Metal Goomerang",3.5,"liquid-metal-goomerang",[[73,1],[77,1],[78,2],[69,2]]],["In Fine Fettle with Liquid Metal","Liquid Metal Gooreatsword",3.5,"liquid-metal-gooreatsword",[[73,1],[77,1],[69,2],[5,2]]],["In Fine Fettle with Liquid Metal","Liquid Metal Helm",3.5,"liquid-metal-helm",[[73,1],[77,1],[79,2],[80,2]]],["In Fine Fettle with Liquid Metal","Liquid Metal Jacket",3.5,"liquid-metal-jacket",[[73,1],[77,1],[41,2],[81,2]]],["In Fine Fettle with Liquid Metal","Liquid Metal Shield",3.5,"liquid-metal-shield",[[73,1],[77,1],[82,2],[69,2]]],["In Fine Fettle with Liquid Metal","Liquid Metal Spear",3.5,"liquid-metal-spear",[[73,1],[77,1],[78,2],[82,2]]],["In Fine Fettle with Liquid Metal","Liquid Metal Sword",3.5,"liquid-metal-sword",[[73,1],[77,1],[42,2],[5,2]]],["Good Godly Gear","Sacrosanct Staff",3.0,"sacrosanct-staff",[[53,3],[83,1],[21,3],[25,2]]],["Good Godly Gear","Venus' Tear",3.0,"venus-tear",[[61,2],[14,3],[15,1],[70,2]]],["Uberswords Illustrated","Uber Falcon Blade",4.0,"uber-falcon-blade",[[79,2],[73,1],[84,2],[85,1]]],["Uberswords Illustrated","Uber Miracle Sword",4.0,"uber-miracle-sword",[[38,2],[73,1],[61,2],[86,1]]],["Making Things with Metal Kings","Metal King Goomerang",5.0,"metal-king-goomerang",[[73,1],[87,1],[88,1],[79,2]]],["Making Things with Metal Kings","Metal King Gooreatsword",5.0,"metal-king-gooreatsword",[[73,1],[87,1],[88,1],[79,2]]],["Making Things with Metal Kings","Metal King Shield",5.0,"metal-king-shield",[[73,1],[87,1],[89,1],[82,2]]],["Making Things with Metal Kings","Metal King Spear",5.0,"metal-king-spear",[[73,1],[87,1],[69,1],[90,2]]],["Making Things with Metal Kings","Metal King Sword",5.0,"metal-king-sword",[[73,1],[87,1],[91,1],[5,2]]],["Economy of the Scales","Scale Shield",0.5,"scale-shield",[[0,1],[92,1]]],["Economy of the Scales","Scale Armour",0.5,"scale-armor",[[0,2],[92,2]]],["'O Holy Knight","Templar's Uniform",0.5,"templar-s-uniform",[[8,2],[18,1]]],["Put a Feather in Your Cap","Feathered Cap",1.0,"feathered-cap",[[28,1],[39,1]]],["An Introduction to Armor","Bronze Armour",1.0,"bronze-armor",[[0,3],[93,2],[7,1]]],["Furry Finery","Fur Hood",1.5,"fur-hood",[[44,1],[94,1]]],["Furry Finery","Fur Poncho",1.5,"fur-poncho",[[44,2]]],["I Love Iron Armor","Iron Helmet",1.0,"iron-helmet",[[3,2],[14,2]]],["I Love Iron Armor","Iron Cuirass",1.0,"iron-cuirass",[[3,3],[14,1],[29,1]]],["I Love Iron Armor","Iron Armour",1.0,"iron-armor",[[3,3],[14,1],[4,1]]],["Filigree for Fun and Profit","Gold Platter",1.0,"gold-platter",[[36,1],[0,1]]],["Filigree for Fun and Profit","Gold Chain",1.0,"gold-chain",[[36,2],[93,1]]],["Filigree for Fun and Profit","Gold Bracer",1.0,"gold-bracer",[[36,1],[0,1]]],["Dress Like a Drasilian","Drasilian Helm",2.0,"drasilian-helm",[[38,1],[36,1],[14,2]]],["Dress Like a Drasilian","Drasilian Armour",2.0,"drasilian-armour",[[38,2],[36,2],[29,1]]],["The Dapper Chap","Dapper Doublet",2.0,"dapper-doublet",[[50,2],[44,1],[34,1]]],["The Dapper Chap","Natty Cravat",2.0,"natty-cravat",[[50,1],[66,1],[29,1]]],["All Things Nice","Cute Cap",1.5,"cute-cap",[[47,2],[8,1]]],["All Things Nice","Bonny Band",1.5,"bonny-band",[[47,2],[18,1]]],["All Things Nice","Pretty Pinny",1.5,"pretty-pinny",[[24,2],[47,1]]],["All Things Nice","Dainty Dress",1.5,"dainty-dress",[[24,2],[26,1]]],["Down the Rabbithole","Bunny Ears",1.5,"bunny-ears",[[8,1],[94,1]]],["Down the Rabbithole","Bunny Suit",2.0,"bunny-suit",[[10,1],[12,2],[34,1]]],["Down the Rabbithole","Fishnet Stockings",1.0,"fishnet-stockings",[[47,1]]],["Crafting Comforting Clothing","Robe of Serenity",1.5,"robe-of-serenity",[[47,1],[2,1],[55,1]]],["Fine and Dandy Designs","Smart Suit",2.0,"smart-suit",[[66,3],[43,1],[95,1]]],["Fine and Dandy Designs","Posh Waistcoat",2.0,"posh-waistcoat",[[50,2],[44,1],[34,1]]],["Fine and Dandy Designs","Bling-Bling Belt",1.0,"bling-bling-belt",[[44,2],[13,1],[25,1]]],["Kit Fit for a King","Crown of Dundrasil",2.0,"crown-of-dundrasil",[[36,3],[38,1],[32,1]]],["Kit Fit for a King","Drasilian Dress Coat",2.0,"drasilian-dress-coat",[[50,2],[44,1],[34,1]]],["Secret of the Silversmiths","Silver Tiara",2.0,"silver-tiara",[[13,2],[25,1]]],["Secret of the Silversmiths","Silver Cuirass",2.0,"silver-cuirass",[[13,2],[14,2],[17,1]]],["Secret of the Silversmiths","Silver Mail",2.0,"silver-mail",[[13,3],[21,2],[17,1]]],["Classy Clobber for Kingly Kids","Prince's Pea Coat",2.0,"prince-s-pea-coat",[[50,3],[59,1],[19,1]]],["Classy Clobber for Kingly Kids","Princess's Robe",2.0,"princess-s-robe",[[50,3],[59,1],[32,1]]],["Platinum Protection","Platinum Platter",2.0,"platinum-platter",[[38,1],[14,1]]],["Platinum Protection","Platinum Shield",2.0,"platinum-shield",[[38,2],[54,2],[34,1]]],["Favourite Fashions of the Masters of Magic","Witch's Hat",2.0,"witch-s-hat",[[43,1],[96,1],[29,1]]],["Favourite Fashions of the Masters of Magic","Witch's Robe",2.0,"witch-s-robe",[[10,2],[96,2],[51,2]]],["Favourite Fashions of the Masters of Magic","Wizard's Robe",2.0,"wizard-s-robe",[[10,2],[96,2],[34,2]]],["That's Magic","Magic Shield",2.0,"magic-shield",[[38,1],[71,1],[19,1]]],["That's Magic","Magic Armour",2.0,"magic-armor",[[38,2],[71,2],[19,2]]],["That's Magic","Magic Vestment",2.0,"magic-vestment",[[97,3],[21,3],[55,1]]],["Glam Gear for Go-Getters","Tiara Tremenda",3.0,"tiara-tremenda",[[36,2],[62,1],[51,2],[98,3]]],["Glam Gear for Go-Getters","Glad Rags",3.5,"glad-rags",[[45,2],[62,2],[99,2],[98,3]]],["Platinum Plating","Platinum Headgear",2.5,"platinum-headgear",[[38,2],[37,1],[27,2]]],["Platinum Plating","Platinum Mail",2.5,"platinum-mail",[[38,3],[100,1],[27,2]]],["Your Very Own Aegis of Illusion","Ethereal Shield",3.0,"ethereal-shield",[[101,3],[33,2],[60,1],[21,2]]],["Gear That Glitters","Twinkling Tuxedo",2.5,"twinkling-tuxedo",[[66,2],[50,2],[101,2],[25,2]]],["Gear That Glitters","Shimmering Dress",2.5,"shimmering-dress",[[66,2],[102,2],[101,2],[25,2]]],["Gilt Gear","Gold Circlet",2.5,"gold-circlet",[[36,2],[32,1],[82,1]]],["An Album of Imperial Attire","Emperor's Attire",3.0,"emperor-s-attire",[[50,3],[60,2],[61,2],[81,2]]],["An Album of Imperial Attire","Empress's Robe",3.0,"empress-s-robe",[[50,3],[60,2],[62,2],[81,2]]],["An Encyclopaedia of Expert Equipment","Ogre Shield",3.0,"ogre-shield",[[69,3],[44,2],[67,1],[55,2]]],["An Encyclopaedia of Expert Equipment","Brigand's Mitts",3.0,"brigand-s-mitts",[[44,2],[99,1],[20,1]]],["An Encyclopaedia of Expert Equipment","Titan Belt",3.0,"titan-belt",[[103,2],[42,1],[41,1]]],["Sacred Styles for Saintly Ladies","Goddess's Tiara",0,"goddess-s-tiara",[[73,1],[61,2],[101,2],[25,1]]],["Sacred Styles for Saintly Ladies","Saintess Dress",3.5,"saintess-dress",[[81,2],[104,3],[33,2],[83,1]]],["Pride of the Valkyries","Warrior Princess's Headdress",3.0,"warrior-princess-s-headdress",[[105,1],[61,2],[101,2],[14,2]]],["Pride of the Valkyries","Warrior Princess's Dress",3.5,"warrior-princess-s-dress",[[106,1],[84,2],[45,3],[83,1]]],["General Directives","General's Jacket",3.5,"general-s-jacket",[[106,2],[43,2],[15,2],[103,1]]],["General Directives","General's Jackboots",3.5,"general-s-jackboots",[[41,2],[82,1],[56,1],[43,2]]],["Twenty-Four Carats of Class","Gold Ring",1.0,"gold-ring",[[36,2]]],["Rings Around the World","Strength Ring",1.5,"strength-ring",[[36,2],[32,1],[103,1]]],["Rings Around the World","Agility Ring",1.5,"agility-ring",[[36,2],[34,1],[39,1]]],["Rings Around the World","Prayer Ring",1.5,"prayer-ring",[[36,2],[19,1],[107,1]]],["My First Pearly Pieces","Pink Pearl Ring",1.5,"pink-pearl-ring",[[13,1],[102,1]]],["My First Pearly Pieces","Rosary",1.5,"rosary",[[104,1],[2,3],[65,1]]],["Next-Level Neckwear","Care Riviere",1.5,"care-riviere",[[13,1],[51,1],[15,1]]],["Next-Level Neckwear","Choker of Riddance",1.5,"choker-of-riddance",[[44,1],[108,1],[32,1]]],["Next-Level Neckwear","Dogged Collar",1.5,"dogged-collar",[[41,1],[103,1],[19,1]]],["Next-Level Neckwear","Full Moon Collar",1.5,"full-moon-collar",[[44,1],[109,1],[17,1]]],["Next-Level Neckwear","Necklace of Immunity",1.5,"necklace-of-immunity",[[36,1],[110,1],[55,1]]],["Next-Level Neckwear","Papillon Pendant",1.5,"papillon-pendant",[[36,2],[47,1],[59,1]]],["Next-Level Neckwear","Protective Pendant",1.5,"protective-pendant",[[33,1],[18,1],[55,1]]],["Next-Level Neckwear","Rousing Rose Collar",1.5,"rousing-rose-collar",[[0,2],[111,1],[32,1]]],["Next-Level Neckwear","Star of Clarity",1.5,"star-of-clarity",[[13,1],[52,1],[80,1]]],["Next-Level Neckwear","Torc of Truth",1.5,"torc-of-truth",[[13,1],[2,1],[55,1]]],["An Anthology of Elemental Earrings","Aerofoil Earrings",2.0,"aerofoil",[[38,1],[34,1]]],["An Anthology of Elemental Earrings","Anti-Freeze Earrings",2.0,"anti-freeze",[[38,1],[19,1]]],["An Anthology of Elemental Earrings","Asbestos Earrings",2.0,"asbestos",[[38,1],[32,1]]],["An Anthology of Elemental Earrings","Concrete Earrings",2.0,"concrete",[[38,1],[17,1]]],["An Anthology of Elemental Earrings","Mirror Earrings",2.0,"mirror",[[38,1],[80,1]]],["An Anthology of Elemental Earrings","Rubber Earrings",2.0,"rubber-earrings",[[38,1],[55,1]]],["Little Lifesavers","Care Ring",2.0,"care-ring",[[36,2],[19,1],[2,1]]],["Little Lifesavers","Full Moon Ring",2.0,"full-moon-ring",[[38,2],[112,3],[23,1]]],["Little Lifesavers","Ring of Clarity",2.0,"ring-of-clarity",[[13,2],[52,3],[113,1]]],["Little Lifesavers","Ring of Immunity",2.0,"ring-of-immunity",[[49,2],[114,3],[23,3]]],["Little Lifesavers","Ring of Riddance",2.0,"ring-of-riddance",[[13,2],[32,1],[108,1]]],["Little Lifesavers","Ring of Truth",2.0,"ring-of-truth",[[13,2],[115,3],[46,1]]],["Little Lifesavers","Rousing Ring",2.0,"rousing-ring",[[36,2],[111,3],[116,1]]],["Little Lifesavers","Sorcerer's Ring",2.0,"sorcerer-s-ring",[[36,2],[56,1]]],["Little Lifesavers","Sorcerer's Stone",2.0,"sorcerer-s-stone",[[36,2],[25,1],[67,1]]],["Footwear of the Rich and Famous","Archangel's Boots",3.0,"archangel-s-boots",[[99,3],[83,1],[39,2]]],["Footwear of the Rich and Famous","Caligae of Clarity",3.0,"caligae-of-clarity",[[44,3],[117,1],[118,3]]],["Footwear of the Rich and Famous","Springheal Boots",3.0,"springheal-boots",[[69,3],[83,1],[118,3]]],["An Earring for Every Element","All-Weather Earrings",3.0,"all-weather",[[82,1],[61,1],[67,1],[14,1]]],["An Earring for Every Element","Blackout Earrings",3.0,"blackout",[[82,1],[84,1],[80,1],[14,1]]],["An Earring for Every Element","Cinderblock Earrings",3.0,"cinderblock-earrings",[[82,1],[62,1],[100,1],[14,1]]],["Brace Yourself","Life Bracer",3.0,"life-bracer",[[82,2],[118,2],[119,3]]],["Brace Yourself","Mighty Armlet",3.0,"mighty-armlet",[[63,2],[62,2],[103,2]]],["Brace Yourself","Brainy Bracer",3.0,"brainy-bracer",[[38,2],[61,2],[60,1],[21,1]]],["Brace Yourself","Spirit Bracer",3.0,"spirit-bracer",[[63,2],[61,2],[107,2],[47,2]]],["Brace Yourself","Wristorative",3.0,"wristorative",[[82,2],[79,2],[119,3]]],["Upper-Class Accessories","Monarch's Mittens",4.5,"monarch-s-mittens",[[50,3],[10,2],[99,2],[104,2]]],["Upper-Class Accessories","Elfin Charm",5.0,"elfin-charm",[[120,2],[118,3],[108,3],[121,1]]],["Dress to Impress","Dashing Doublet",4.0,"dashing-doublet",[[106,2],[122,2],[67,2],[123,1]]],["Dress to Impress","Suave Scarf",4.0,"suave-scarf",[[81,2],[18,2],[62,2],[25,2]]],["King of the Swindlers","Swindler King's Scarf",4.0,"",[[106,2],[82,1],[62,2],[45,2]]],["King of the Swindlers","Swindler King's Stole",4.0,"",[[106,3],[63,2],[61,2],[45,2]]],["Field Manual","Field Marshal's Finery",4.0,"",[[122,2],[96,2],[124,2],[103,2]]],["Field Manual","Field Marshal's Footwear",4.0,"",[[122,2],[82,2],[83,1],[30,2]]],["Gifts from the Goddess","Sacred Circlet",4.0,"",[[87,1],[61,2],[101,3],[83,1]]],["Gifts from the Goddess","Sacred Raiment",4.0,"",[[106,2],[104,3],[89,2],[33,1]]],["Sizzling Styles","Banefire Boomerang",4.0,"",[[31,3],[5,3],[62,1],[69,1]]],["Sizzling Styles","Combusticlaws",4.0,"",[[31,2],[7,3],[125,3],[62,1]]],["Sizzling Styles","Crimson Robe",4.0,"",[[31,3],[72,3],[107,2],[62,1]]],["Sizzling Styles","Flame Tang",4.0,"",[[31,2],[26,3],[62,1],[69,2]]],["Sizzling Styles","Inferno Blade",4.0,"",[[31,2],[125,2],[62,1],[69,2]]],["Circles of Life","Life Ring",4.0,"",[[63,2],[118,3],[102,1],[83,1]]],["Circles of Life","Skull Ring",4.0,"",[[63,2],[124,2],[57,2],[126,1]]],["Sage Advice","Supreme Sage's Staff",4.0,"",[[78,3],[71,2],[68,1],[65,2]]],["Sage Advice","Scholar's Specs",4.0,"",[[36,2],[65,3],[14,2],[33,1]]],["Sage Advice","Minister's Mitts",4.0,"",[[65,3],[122,2],[68,1],[94,2]]],["Sage Advice","Ruby of Protection",4.0,"",[[84,2],[122,1],[75,2],[104,1]]],["Badges of Honour","Sovereign Seal",4.0,"",[[82,2],[76,2],[84,2]]],["Badges of Honour","Monarchic Mark",4.0,"",[[82,2],[104,2],[61,2]]],["Styles for All Seasons","Autumn Shower Hat",4.5,"autumn-shower-hat",[[81,2],[117,1],[100,1],[47,3],[89,2]]],["Styles for All Seasons","Spring Breeze Hat",4.5,"spring-breeze-hat",[[81,2],[117,1],[67,1],[47,3],[95,2]]],["Styles for All Seasons","Summer Cloud Hat",4.5,"summer-cloud-hat",[[81,2],[117,1],[61,1],[47,3],[24,2]]],["Styles for All Seasons","Winter Sky Hat",4.5,"winter-sky-hat",[[81,2],[117,1],[84,1],[47,3],[54,2]]],["Trodain's Top Trends","Artisanal Trodain Bandana",4.5,"artisanal-trodain-bandana",[[86,1],[127,1]]],["Trodain's Top Trends","Artisanal Trodain Togs",4.5,"artisanal-trodain-togs",[[86,1],[127,1]]],["Sweet Stuff for Swindlers","Swindler's Scarf",1.5,"swindler-s-scarf",[[47,2],[8,1],[27,1]]],["Sweet Stuff for Swindlers","Swindler's Stole",1.5,"swindler-s-stole",[[47,2],[19,1],[27,1]]],["Glammer Gear for Goer-Getterers","Gladder Rags",5.0,"gladder-rags",[[10,3],[122,2],[127,2],[95,2],[98,3]]],["Glammer Gear for Goer-Getterers","Tiara Tremendisima",5.0,"tiara-tremendisima",[[105,2],[123,1],[80,2],[128,1],[98,3]]]];
 
 /* ---------- Estado ---------- */
-var DEF={v:1,level:1,tol:2,chap:0,adj1:0,adj2:4,phase:0,noshop:1,item:{},done:{},rec:{},logs:[],chk:{},sleep:'',updatedAt:0};
+var DEF={v:1,level:1,tol:2,chap:0,adj1:0,adj2:4,phase:0,semcomp:0,item:{},done:{},rec:{},logs:[],chk:{},updatedAt:0};
 function cloneDef(){return JSON.parse(JSON.stringify(DEF));}
 function sanitize(o){
   var d=cloneDef();
@@ -508,7 +522,7 @@ function sanitize(o){
   if(isFinite(o.adj1))d.adj1=clamp(Math.round(o.adj1),-6,10);
   if(isFinite(o.adj2))d.adj2=clamp(Math.round(o.adj2),-6,10);
   if(isFinite(o.phase))d.phase=clamp(Math.round(o.phase),0,5);
-  if(o.noshop===0||o.noshop===1)d.noshop=o.noshop;
+  if(o.semcomp===0||o.semcomp===1)d.semcomp=o.semcomp;
   if(o.item&&typeof o.item==='object'&&!Array.isArray(o.item)){Object.keys(o.item).forEach(function(k){var x=o.item[k];if((x===1||x===2)&&/^[a-z0-9-]{1,48}$/.test(k))d.item[k]=x;});}
   ['done','rec','chk'].forEach(function(k){
     var s=o[k];
@@ -521,7 +535,6 @@ function sanitize(o){
       return {id:String(l.id||('l'+Math.random())).slice(0,40),boss:l.boss.slice(0,60),lv:clamp(Math.round(+l.lv)||1,1,99),out:l.out,note:String(l.note||'').slice(0,140),on:l.on!==false,t:+l.t||0};
     });
   }
-  if(['','none','bonus','nobonus'].indexOf(o.sleep)>-1)d.sleep=o.sleep;
   if(isFinite(o.updatedAt))d.updatedAt=+o.updatedAt;
   return d;
 }
@@ -615,7 +628,7 @@ function renderHud(){
     h='Próximo boss: <b>'+esc(m.name)+'</b> · faixa '+b.lo+'–'+b.hi+(m.key?' · teto '+b.hi:' · sem teto')+' · confiança '+conf(m)+(c?' · calibragem '+fmt(c):'');
   }
   var ch=curChap();
-  if(ch){var cb=chapBand(ch);h+='<br>Cap. '+ch.n+' · Game8 '+chapBase(ch)+' · meta '+cb.lo+'–'+cb.hi+(ch.key?' · teto '+cb.hi:'');}
+  if(ch){var cb=chapBand(ch);h+='<br><button type="button" class="lnk" data-act="me" data-v="hud">Cap. '+ch.n+' ↓</button> · Game8 '+chapBase(ch)+' · meta '+cb.lo+'–'+cb.hi+(ch.key?' · teto '+cb.hi:'');}
   sub.innerHTML=h;
 }
 
@@ -635,17 +648,75 @@ function showTab(id){
   if(id==='materiais'){syncMat();renderMat();}
   if(id==='bosses')renderLogs();
   try{if(location.hash!=='#'+id)location.hash=id;}catch(e){}
+  ui.vl=S.level;
   window.scrollTo(0,0);
 }
 function renderAll(){renderHud();var y=window.scrollY;showTab(ui.tab);window.scrollTo(0,y);}
 
+/* ---------- Sumário e saltos ---------- */
+function jumpTo(id){
+  var el=document.getElementById(id);if(!el)return false;
+  var hud=$('#hud'),top=0;
+  if(hud){var st=0;try{st=parseFloat(getComputedStyle(hud).top)||0;}catch(e){}top=hud.offsetHeight+st;}
+  var y=Math.max(0,el.getBoundingClientRect().top+window.scrollY-top-8);
+  var calm=false;try{calm=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);}catch(e){}
+  try{window.scrollTo({top:y,behavior:calm?'auto':'smooth'});}catch(e){window.scrollTo(0,y);}
+  el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
+  setTimeout(function(){el.classList.remove('flash');},1600);
+  return true;
+}
+function tocRow(id,n,name,mt,st,here){
+  return '<button type="button" class="toci'+(here?' here':'')+'" data-act="jump" data-id="'+id+'"><span class="tn">'+n+'</span><span class="tnm">'+name+'</span><span class="tmt">'+mt+'</span><span class="tst '+st[1]+'">'+st[0]+'</span></button>';
+}
+function tocStat(st,done){
+  if(done)return ['superado','high'];
+  if(st.k==='ok')return ['na meta','ok'];
+  if(st.k==='low')return ['faltam '+st.d,'low'];
+  if(st.k==='cap')return ['+'+st.d+' do teto','cap'];
+  return ['+'+st.d,'high'];
+}
+function sumCap(){
+  var h='<section class="win" id="toc"><h2>Sumário</h2><p class="small mute" style="margin-bottom:4px">Toque num capítulo para ir até ele. A meta já inclui o ajuste Dracônico e a calibragem.</p>',last=0;
+  CHAPS.forEach(function(x){
+    if(x.ato!==last){last=x.ato;h+='<div class="sub"><b>'+(x.ato===3?'Pós-clear':'Ato '+x.ato)+'</b></div>';}
+    var b=chapBand(x);
+    h+=tocRow('cap-'+x.n,x.n,esc(x.name)+(x.key?' <span class="badge key">chefe-chave</span>':''),b.lo+'–'+b.hi,tocStat(chapStatus(x),false),x.n===S.chap);
+  });
+  return h+'</section>';
+}
+function sumBoss(){
+  var nxt=nextMarker();
+  return '<section class="win" id="toc"><h2>Sumário</h2><p class="small mute" style="margin-bottom:4px">Toque num boss para ir até ele. A faixa já inclui a calibragem.</p>'+
+   MARKERS.map(function(m){
+     var b=bandOf(m),done=!!S.done[m.id],here=!!(nxt&&nxt.id===m.id);
+     return tocRow('mk-'+m.id,done?'✓':(here?'▸':'·'),esc(m.name)+(m.key?' <span class="badge key">teto '+b.hi+'</span>':''),b.lo+'–'+b.hi,tocStat(statusFor(m),done),here);
+   }).join('')+'</section>';
+}
+function whereCap(){
+  var i;
+  if(S.chap)for(i=0;i<CHAPS.length;i++)if(CHAPS[i].n===S.chap)return CHAPS[i];
+  for(i=0;i<CHAPS.length;i++)if(chapBand(CHAPS[i]).hi>=S.level)return CHAPS[i];
+  return CHAPS[CHAPS.length-1];
+}
+function whereArea(){
+  for(var i=0;i<AREAS.length;i++)if(AREAS[i].hi>=S.level)return i;
+  return AREAS.length-1;
+}
+function goMe(fromHud){
+  var need=(ui.tab!=='regua')||(fromHud&&ui.rmode!=='cap');
+  if(fromHud)ui.rmode='cap';
+  if(need)showTab('regua');
+  var id;
+  if(ui.rmode==='boss'){var m=nextMarker();id=m?'mk-'+m.id:'toc';}
+  else if(ui.rmode==='area')id='ar-'+whereArea();
+  else id='cap-'+whereCap().n;
+  jumpTo(id);
+}
+
 /* ---------- Régua ---------- */
 function viewBoss(){
   var c=calib(),nxt=nextMarker();
-  var h='<section class="win"><h2>Régua por boss</h2><p>Faixa de cada marco = nível relatado ± '+S.tol+(c?', com calibragem '+fmt(c):'')+'. O traço vermelho é o teto e vale só nos chefes-chave, aqueles em que mais de um jogador relatou um pico de dificuldade.</p><p class="mute small">Os níveis vêm de relatos de jogadores na Steam e de um guia, não de dados oficiais. Confiança: alta com 4 ou mais relatos, média com 2 ou 3, baixa com 1. A barra cinza sob cada régua mostra o intervalo realmente relatado. A ordem dos marcos segue o nível, e só alguns relatos nomeiam a área.</p></section>';
-  h+='<section class="win"><h2>Visão geral</h2><div class="scroll"><table><thead><tr><th>Marco</th><th>Faixa</th><th>Teto</th><th>Conf.</th></tr></thead><tbody>'+
-   MARKERS.map(function(m){var b=bandOf(m);return '<tr'+(nxt&&nxt.id===m.id?' class="cur"':'')+'><td>'+(S.done[m.id]?'✓ ':'')+esc(m.name)+'</td><td>'+b.lo+'–'+b.hi+'</td><td>'+(m.key?b.hi:'—')+'</td><td>'+conf(m)+'</td></tr>';}).join('')+
-   '</tbody></table></div></section>';
+  var h=sumBoss()+'<details class="win"><summary>Como ler a régua por boss</summary><p>Faixa de cada marco = nível relatado ± '+S.tol+(c?', com calibragem '+fmt(c):'')+'. O traço vermelho é o teto e vale só nos chefes-chave, aqueles em que mais de um jogador relatou um pico de dificuldade.</p><p class="mute small">Os níveis vêm de relatos de jogadores na Steam e de um guia, não de dados oficiais. Confiança: alta com 4 ou mais relatos, média com 2 ou 3, baixa com 1. A barra cinza sob cada régua mostra o intervalo realmente relatado. A ordem dos marcos segue o nível, e só alguns relatos nomeiam a área.</p></details>';
   var TK=[1,20,40,60,80];
   MARKERS.forEach(function(m){
     var b=bandOf(m),st=statusFor(m),done=!!S.done[m.id],ck=confKey(m);
@@ -657,16 +728,17 @@ function viewBoss(){
     else if(st.k==='low'){stTxt='Faltam '+st.d+' '+plural(st.d,'nível','níveis')+' para a faixa';stK='low';}
     else if(st.k==='cap'){stTxt='Você está '+st.d+' '+plural(st.d,'nível','níveis')+' acima do teto. Evite ganhar mais XP antes de enfrentá-lo.';stK='cap';}
     else{stTxt=st.d+' '+plural(st.d,'nível','níveis')+' acima da faixa';stK='';}
-    h+='<section class="win marker'+(done?' done':'')+(nxt&&nxt.id===m.id?' next':'')+'">'+
+    h+='<section id="mk-'+m.id+'" class="win marker'+(done?' done':'')+(nxt&&nxt.id===m.id?' next':'')+'">'+
       '<div class="mhead"><label><input type="checkbox" data-act="done" data-id="'+m.id+'"'+(done?' checked':'')+'><span class="mname">'+esc(m.name)+'</span></label>'+
       '<span class="badges">'+(m.key?'<span class="badge key">Chefe-chave</span>':'')+'<span class="badge c-'+ck+'">Confiança '+CFL[ck]+'</span></span></div>'+
       '<div class="nums"><span>Relatos <b>'+esc(m.rep)+'</b></span><span>Faixa <b>'+b.lo+'–'+b.hi+'</b></span>'+(m.key?'<span>Teto <b>'+b.hi+'</b></span>':'')+'<span>'+m.n+' '+plural(m.n,'relato','relatos')+', '+m.d+' com Dracônico</span></div>'+
-      '<div class="track" role="img" aria-label="Faixa '+b.lo+' a '+b.hi+', relatado '+m.lo+' a '+m.hi+', seu nível '+S.level+'"><div class="band" style="left:'+pct(b.lo)+'%;width:'+w+'%"></div>'+(m.key?'<div class="cap" style="left:'+pct(b.hi)+'%"></div>':'')+'<div class="needle" style="left:'+pct(S.level)+'%"></div></div>'+
+      '<div class="track" role="img" aria-label="Faixa '+b.lo+' a '+b.hi+', relatado '+m.lo+' a '+m.hi+', seu nível '+S.level+'"><div class="band" style="left:'+pct(b.lo)+'%;width:'+w+'%"></div>'+(m.key?'<div class="capmk" style="left:'+pct(b.hi)+'%"></div>':'')+'<div class="needle" style="left:'+pct(S.level)+'%"></div></div>'+
       '<div class="rbar" aria-hidden="true"><i style="left:'+pct(m.lo)+'%;width:'+rw+'%"></i></div>'+
       '<div class="ticks" aria-hidden="true">'+TK.map(function(t,i){return '<span style="left:'+pct(t)+'%'+(i===0?';transform:none':(i===TK.length-1?';transform:translateX(-100%)':''))+'">'+t+'</span>';}).join('')+'</div>'+
       '<div class="mstat '+stK+'">'+stTxt+'</div>'+
       '<div class="mnote">'+esc(m.note)+'</div>'+
-      '<div class="srcs">'+m.src.map(function(x){return '<a href="'+x[1]+'" target="_blank" rel="noopener noreferrer">'+esc(x[0])+'</a>';}).join('')+'</div></section>';
+      '<div class="srcs">'+m.src.map(function(x){return '<a href="'+x[1]+'" target="_blank" rel="noopener noreferrer">'+esc(x[0])+'</a>';}).join('')+'</div>'+
+      '<div class="row" style="margin-top:8px"><button type="button" class="chip" data-act="toc">↑ Sumário</button></div></section>';
   });
   h+='<section class="win"><h2>Relatos sem área identificada</h2><ul class="clean small">'+
     '<li><b>Boss aranha:</b> 15–21 em 8 relatos, sem Dracônico, exceto um que cita “super monsters” aos 21. Um jogador diz que os dois personagens seguintes entram no 23, o que bate com o Reddit (Rab e Jade). <a href="'+S1+'3338745825891720843" target="_blank" rel="noopener noreferrer">Steam</a></li>'+
@@ -677,19 +749,19 @@ function viewBoss(){
 }
 
 function viewRegua(){
+  var hint={cap:'Vai ao capítulo marcado em “Estou aqui” ou, se não marcou, ao primeiro cujo teto ainda está acima do seu nível.',area:'Vai à área do seu nível.',boss:'Vai ao próximo boss ainda não superado.'}[ui.rmode];
   var seg='<section class="win"><h2>Níveis recomendados</h2><div class="seg">'+
    [['cap','Capítulos'],['area','Áreas'],['boss','Bosses']].map(function(m){return '<button type="button" class="chip" data-act="rmode" data-v="'+m[0]+'" aria-pressed="'+(ui.rmode===m[0])+'">'+m[1]+'</button>';}).join('')+
-   '</div><p class="small mute" style="margin-top:8px">'+({cap:'Recomendado do Game8 Japão por capítulo, com ajuste Dracônico.',area:'Faixas por área da lista de um jogador no Reddit, para monstros mais fortes.',boss:'Relatos de jogadores por boss, com teto nos chefes-chave.'})[ui.rmode]+'</p></section>';
+   '</div><p class="small mute" style="margin-top:8px">'+({cap:'Recomendado do Game8 Japão por capítulo, com ajuste Dracônico.',area:'Faixas por área da lista de um jogador no Reddit, para monstros mais fortes.',boss:'Relatos de jogadores por boss, com teto nos chefes-chave.'})[ui.rmode]+'</p>'+
+   '<div class="row" style="margin-top:8px"><button type="button" class="btn sm main" data-act="me">Ir para onde estou</button></div><p class="small mute" style="margin-top:6px">'+hint+'</p></section>';
   return seg+(ui.rmode==='area'?viewArea():(ui.rmode==='boss'?viewBoss():viewCap()));
 }
 
 function viewCap(){
   var c=calib();
-  var h='<section class="win"><h2>Capítulos</h2><p class="small">Nível recomendado pelo Game8 Japão por capítulo, no modo normal, mais um ajuste Dracônico por ato (Ato 1: '+fmt(S.adj1)+', Ato 2: '+fmt(S.adj2)+'). Meta = Game8 + ajuste'+(c?' + calibragem '+fmt(c):'')+', com tolerância ±'+S.tol+'. O traço vermelho é o teto nos capítulos com chefe-chave; o teto por boss, na aba Bosses, é mais estrito quando existe relato específico.</p>'+
-   '<p class="mute small">Ato 1 e Ato 2 correspondem aos capítulos antes e depois do incidente no Game8 e batem com os Atos da lista do Reddit pela ordem das áreas (correspondência minha). Nomes de lugares em inglês também são minha correspondência a partir do japonês, e os chefes aparecem como no Game8. Concordância compara Game8, Reddit e Steam: alta com 3 ou mais fontes a até 4 níveis uma da outra, média até 6, baixa acima disso. Barra verde = Game8, cinza = lista do Reddit.</p></section>';
+  var h=sumCap()+'<details class="win"><summary>Como ler os capítulos</summary><p class="small">Nível recomendado pelo Game8 Japão por capítulo, no modo normal, mais um ajuste Dracônico por ato (Ato 1: '+fmt(S.adj1)+', Ato 2: '+fmt(S.adj2)+'). Meta = Game8 + ajuste'+(c?' + calibragem '+fmt(c):'')+', com tolerância ±'+S.tol+'. O traço vermelho é o teto nos capítulos com chefe-chave; o teto por boss, na aba Bosses, é mais estrito quando existe relato específico.</p>'+
+   '<p class="mute small">Ato 1 e Ato 2 correspondem aos capítulos antes e depois do incidente no Game8 e batem com os Atos da lista do Reddit pela ordem das áreas (correspondência minha). Nomes de lugares em inglês também são minha correspondência a partir do japonês, e os chefes aparecem como no Game8. Concordância compara Game8, Reddit e Steam: alta com 3 ou mais fontes a até 4 níveis uma da outra, média até 6, baixa acima disso. Barra verde = Game8, cinza = lista do Reddit.</p></details>';
   h+='<section class="win"><h2>Entrada dos aliados</h2><p class="small">Erik 5 · Serena e Veronica 12 · Sylvando 15 · Rab e Jade 23 · o oitavo membro (“Eight” no comentário) 36.</p><p class="small mute">Relato no Reddit. O 23 de Rab e Jade bate com um relato da Steam, e 5, 12 e 23 coincidem com os capítulos 1, 3 e 5 do Game8.</p></section>';
-  h+='<section class="win"><h2>Visão geral</h2><div class="scroll"><table><thead><tr><th>Cap.</th><th>Região</th><th>Game8</th><th>Meta</th><th>Conc.</th></tr></thead><tbody>'+
-   CHAPS.map(function(x){var b=chapBand(x),cc=concord(x);return '<tr'+(x.n===S.chap?' class="cur"':'')+'><td>'+x.n+'</td><td>'+esc(x.name)+'</td><td>'+(x.g2?x.g+'–'+x.g2:x.g)+'</td><td>'+b.lo+'–'+b.hi+'</td><td>'+cc.lab+'</td></tr>';}).join('')+'</tbody></table></div></section>';
   var TK=[1,20,40,60,80];
   CHAPS.forEach(function(x){
     var b=chapBand(x),st=chapStatus(x),cc=concord(x),here=x.n===S.chap;
@@ -700,10 +772,10 @@ function viewCap(){
     else if(st.k==='cap'){stTxt='Você está '+st.d+' '+plural(st.d,'nível','níveis')+' acima do teto. Evite ganhar mais XP antes do chefe-chave.';stK='cap';}
     else{stTxt=st.d+' '+plural(st.d,'nível','níveis')+' acima da meta';stK='';}
     var rb=x.r?'<div class="rbar" aria-hidden="true"><i style="left:'+pct(x.r[0])+'%;width:'+Math.max(1.2,pct(x.r[1])-pct(x.r[0]))+'%"></i></div>':'<div class="rbar" aria-hidden="true"></div>';
-    h+='<section class="win marker chapcard'+(here?' here':'')+'">'+
+    h+='<section id="cap-'+x.n+'" class="win marker chapcard'+(here?' here':'')+'">'+
       '<div class="mhead"><span class="mname">Cap. '+x.n+' · '+esc(x.name)+'</span><span class="badges">'+(x.key?'<span class="badge key">Chefe-chave</span>':'')+'<span class="badge">Ato '+x.ato+'</span></span></div>'+
       '<div class="nums"><span>Game8 <b>'+(x.g2?x.g+'–'+x.g2:x.g)+'</b></span><span>Meta <b>'+b.lo+'–'+b.hi+'</b></span>'+(x.key?'<span>Teto <b>'+b.hi+'</b></span>':'')+'</div>'+
-      '<div class="track" role="img" aria-label="Meta '+b.lo+' a '+b.hi+', Game8 '+chapBase(x)+', seu nível '+S.level+'"><div class="band" style="left:'+pct(b.lo)+'%;width:'+w+'%"></div><div class="gmark" style="left:'+pct(chapBase(x))+'%"></div>'+(x.key?'<div class="cap" style="left:'+pct(b.hi)+'%"></div>':'')+'<div class="needle" style="left:'+pct(S.level)+'%"></div></div>'+
+      '<div class="track" role="img" aria-label="Meta '+b.lo+' a '+b.hi+', Game8 '+chapBase(x)+', seu nível '+S.level+'"><div class="band" style="left:'+pct(b.lo)+'%;width:'+w+'%"></div><div class="gmark" style="left:'+pct(chapBase(x))+'%"></div>'+(x.key?'<div class="capmk" style="left:'+pct(b.hi)+'%"></div>':'')+'<div class="needle" style="left:'+pct(S.level)+'%"></div></div>'+
       rb+
       '<div class="ticks" aria-hidden="true">'+TK.map(function(t,i){return '<span style="left:'+pct(t)+'%'+(i===0?';transform:none':(i===TK.length-1?';transform:translateX(-100%)':''))+'">'+t+'</span>';}).join('')+'</div>'+
       '<div class="mstat '+stK+'">'+stTxt+'</div>'+
@@ -712,7 +784,7 @@ function viewCap(){
       (x.sn?'<div class="chap-b">Steam: '+esc(x.sn)+'</div>':'')+
       (x.note?'<div class="mnote">'+esc(x.note)+'</div>':'')+
       '<div class="concord">Concordância '+cc.lab+' ('+cc.k+' '+plural(cc.k,'fonte','fontes')+(cc.k>1?', diferença de '+cc.sp+' '+plural(cc.sp,'nível','níveis'):'')+')</div>'+
-      '<div class="row" style="margin-top:8px"><button type="button" class="chip" data-act="chap" data-id="'+x.n+'" aria-pressed="'+here+'">Estou aqui</button></div></section>';
+      '<div class="row" style="margin-top:8px"><button type="button" class="chip" data-act="chap" data-id="'+x.n+'" aria-pressed="'+here+'">Estou aqui</button><button type="button" class="chip" data-act="toc">↑ Sumário</button></div></section>';
   });
   return h;
 }
@@ -725,7 +797,7 @@ function viewArea(){
     h+='<section class="win"><h2>Ato '+a+'</h2>'+rows.map(function(x){
       var L=S.level,st,k;
       if(L<x.lo){k='low';st='faltam '+(x.lo-L);}else if(L<=x.hi){k='ok';st='na faixa';}else{k='high';st='acima';}
-      return '<div class="arow"><div class="an"><b>'+esc(x.name)+'</b> <span class="px">'+x.lo+'–'+x.hi+'</span>'+(x.note?'<div class="small mute">'+esc(x.note)+'</div>':'')+'</div><span class="pill '+k+'">'+st+'</span>'+
+      return '<div class="arow" id="ar-'+AREAS.indexOf(x)+'"><div class="an"><b>'+esc(x.name)+'</b> <span class="px">'+x.lo+'–'+x.hi+'</span>'+(x.note?'<div class="small mute">'+esc(x.note)+'</div>':'')+'</div><span class="pill '+k+'">'+st+'</span>'+
         (x.q?'<button type="button" class="btn sm" data-act="arec" data-v="'+esc(x.q)+'">Receitas ('+recCount(x.q)+')</button>':'')+'</div>';
     }).join('')+'</section>';
   });
@@ -771,7 +843,7 @@ function viewRules(){
    '<li>Se falhar, o item sai com qualidade base e não rende pérolas.</li>'+
    '<li>Se o foco acabar, a forja termina mesmo com o item incompleto.</li>'+
    '<li>Habilidades de forja gastam foco: subir ou baixar a temperatura (mais ou menos dano), dobrar ou reduzir os golpes e atingir várias seções. Há um golpe de meia força. Dica do RPGSite: acertar o máximo de quadrados num golpe só e usar o de meia força quando estiver perto do alvo. O Herói aprende essas habilidades ao subir de nível.</li>'+
-   '<li>Pérolas do Perfeccionista: vêm de forjar equipamento novo. A wiki cita também baús e lojas mais tarde, mas com “Sem compras” conte com baús e forja. Elas reforjam peças +2 ou menos até +3, o custo sobe com o nível da peça e a reforja também pode falhar.</li>'+
+   '<li>Pérolas do Perfeccionista: vêm de forjar equipamento novo. A wiki cita também baús e lojas mais tarde (as lojas ficam de fora se a sua run tiver a opção Sem compras). Elas reforjam peças +2 ou menos até +3, o custo sobe com o nível da peça e a reforja também pode falhar.</li>'+
    '<li>Ingredientes: cristais azuis grandes (minerar), frutas e madeira de árvores, e drops de monstros. Muitos itens saem só de materiais crus, ou de materiais mais uma peça de equipamento.</li>'+
    '<li>Cada item só pode ser forjado depois de achar o livro dele.</li>'+
    '<li>Onde forjar: em acampamentos. A wiki diz que nas versões internacionais dá para forjar quase em qualquer lugar; confira no seu Switch.</li></ul>'+
@@ -895,12 +967,12 @@ function needInfo(){
   });
   return {tot:tot,who:who,miss:miss,n:n};
 }
-function onlyShop(m){return !!S.noshop&&m.g==='L';}
+function onlyShop(m){return !!S.semcomp&&m.g==='L';}
 function tagsHtml(m){
   var h='';
   'LPBTQD'.split('').forEach(function(c){
     if(m.g.indexOf(c)<0)return;
-    var blk=(c==='L'&&S.noshop);
+    var blk=(c==='L'&&S.semcomp);
     h+='<span class="tag t'+c+(blk?' blk':'')+'"'+(blk?' title="Bloqueada pela opção Sem compras"':'')+'>'+TAGN[c]+'</span>';
   });
   if(m.d.some(function(d){return d[2]==='c';}))h+='<span class="tag ts">roubável</span>';
@@ -921,14 +993,14 @@ function mline(label,arr,cls){
 }
 function matBody(i){
   var m=MAT[i],h='';
-  h+=mline(S.noshop?'Loja (bloqueada pelo Sem compras)':'Loja',m.l,S.noshop?' blk':'');
+  h+=mline(S.semcomp?'Loja (bloqueada pelo Sem compras)':'Loja',m.l,S.semcomp?' blk':'');
   h+=mline('Ponto brilhante e mapa',m.p);
   h+=mline('Baú, pote ou barril',m.b);
   h+=mline('Troca (cassino, medalhinhas)',m.t);
   h+=mline('Quest e recompensa',m.q);
   if(m.d.length)h+='<div class="ml"><b>Drops de monstros</b>'+m.d.map(function(d){return dropChip(d,'button');}).join('')+'</div>';
   if(!m.g)h+='<div class="ml">Nenhuma das fontes diz onde achar este material.</div>';
-  if(m.v)h+='<div class="ml"><b>Valor de venda</b>'+money(m.v)+(S.noshop?' (só de referência: sem lojas você não vende)':'')+'</div>';
+  if(m.v)h+='<div class="ml"><b>Valor de venda</b>'+money(m.v)+(S.semcomp?' (só de referência: sem lojas você não vende)':'')+'</div>';
   if(m.x)h+='<div class="ml mute">'+esc(m.x)+'</div>';
   var us=USEL[i].filter(function(u){return RCP[u[0]][3]&&ITEMS[RCP[u[0]][3]];}),out=USEL[i].length-us.length;
   h+='<div class="ml"><b>Usado em ('+us.length+')</b><div class="its">'+us.map(function(u){
@@ -947,7 +1019,7 @@ function matMatch(i,q,need){
   var m=MAT[i];
   if(ui.mf.alvo&&!need.tot[i])return false;
   if(ui.mf.drop&&m.g.indexOf('D')<0)return false;
-  if(ui.mf.free&&!(/[PBTQ]/.test(m.g)||(!S.noshop&&m.g.indexOf('L')>-1)))return false;
+  if(ui.mf.free&&!(/[PBTQ]/.test(m.g)||(!S.semcomp&&m.g.indexOf('L')>-1)))return false;
   if(q&&HAY[i].indexOf(q)<0)return false;
   return true;
 }
@@ -1027,7 +1099,8 @@ function viewMateriais(){
    '<button type="button" class="chip" data-act="noshop">Sem compras</button></div>'+
    '<div class="chips" id="msort"><span class="small mute" style="align-self:center">Ordem</span>'+seg('ms',[['uso','Mais usados'],['az','A–Z'],['valor','Valor']])+'</div>'+
    '<details class="how"><summary>Como ler</summary><ul class="clean">'+
-   '<li><b>Loja</b>: à venda em lojas e mercadores. Com “Sem compras” ligado, aparece riscada.</li>'+
+   '<li><b>Loja</b>: à venda em lojas e mercadores.</li>'+
+   '<li><b>Sem compras</b>: ligue só se a sua run tiver essa opção Dracônica (lojas fechadas). Desligado, as lojas contam como fonte normal. Ligado, aparecem riscadas.</li>'+
    '<li><b>Ponto</b>: ponto brilhante no mapa. <b>Baú/pote</b>: baús, potes, barris e armários.</li>'+
    '<li><b>Troca</b>: cassino e medalhinhas. <b>Quest</b>: recompensas.</li>'+
    '<li><b>Drop</b>: monstros que largam o item. Toque no monstro para ver tudo o que ele larga.</li>'+
@@ -1042,7 +1115,7 @@ function syncMat(){
   var on=function(sel,fn){Array.prototype.forEach.call(document.querySelectorAll(sel),function(b){b.setAttribute('aria-pressed',String(fn(b)));});};
   on('#mmode .chip',function(b){return b.getAttribute('data-v')===ui.mm;});
   on('#mflt .chip[data-act="mf"]',function(b){return !!ui.mf[b.getAttribute('data-v')];});
-  on('#mflt .chip[data-act="noshop"]',function(){return !!S.noshop;});
+  on('#mflt .chip[data-act="noshop"]',function(){return !!S.semcomp;});
   on('#msort .chip',function(b){return b.getAttribute('data-v')===ui.ms;});
   var s=$('#msort');if(s)s.style.display=ui.mm==='mat'?'':'none';
 }
@@ -1080,23 +1153,16 @@ function renderLogs(){
 /* ---------- Combate ---------- */
 function viewCombate(){
   var done=CHK.filter(function(_,i){return S.chk['c'+i];}).length;
-  var sl=[['','Não testei'],['bonus','Tem bônus'],['nobonus','Sem bônus']];
-  return '<section class="win"><h2>Sono e status</h2>'+
-   '<p><b>Snooze:</b> 50% de precisão base, que chega a 100% contra monstros sem resistência quando quem conjura atinge 999 de Magical Might. Monstro resistente não chega a 100%. O Herói aprende no nível 16 e Rab no 23.</p>'+
-   '<p><b>Sleeper Hit:</b> painel Knives, 6 pontos para Erik e 7 para Sylvando, 3 MP, 120% de dano em um alvo e 50% de chance de dormir (Nastier Knives aumenta).</p>'+
-   '<p class="mute small">Fonte: Dragon Quest Wiki. Nenhuma opção Dracônica muda essa precisão.</p></section>'+
-   '<section class="win"><h2>Teste: bônus contra alvo dormindo</h2><p class="small mute">A wiki não informa se o dano sobe contra alvo adormecido. Teste numa luta fácil e registre aqui.</p>'+
-   '<div class="seg">'+sl.map(function(s){return '<button type="button" class="chip" data-act="sleep" data-v="'+s[0]+'" aria-pressed="'+(S.sleep===s[0])+'">'+s[1]+'</button>';}).join('')+'</div></section>'+
-   '<section class="win"><h2>Relatos úteis</h2><ul class="clean small">'+
+  return '<section class="win"><div class="phead"><h2>Antes de cada boss</h2><span class="count" id="ccount">'+done+'/'+CHK.length+'</span></div>'+
+   CHK.map(function(t,i){var d=!!S.chk['c'+i];return '<label class="chk'+(d?' done':'')+'"><input type="checkbox" data-act="chk" data-id="c'+i+'"'+(d?' checked':'')+'><span>'+esc(t)+'</span></label>';}).join('')+
+   '<div class="row" style="margin-top:10px"><button class="btn" type="button" data-act="chk-reset">Limpar checklist</button></div></section>'+
+   '<details class="win"><summary>Relatos de jogadores</summary><ul class="clean small" style="margin-top:6px">'+
    '<li>Com o grupo todo buffado, buffs de escudo e uma cura de nível médio, o dano recebido cai a quase nada.</li>'+
    '<li>Aprenda a cura de nível médio antes do Slayer of the Sands: os relatos de vitória aos 16–17 a citam.</li>'+
    '<li>Depois que o barco entra na história, os inimigos usam mais ataques em área.</li>'+
    '<li>Lute com cada tipo de monstro ao menos uma vez. Alguns só aparecem em certos horários ou climas.</li>'+
    '<li>Jogadores sugerem mover o Herói para trás ou rodá-lo na reserva.</li></ul>'+
-   '<p class="small" style="margin-top:8px">Fontes: <a href="'+T3+'" target="_blank" rel="noopener noreferrer">Steam</a>, <a href="'+T2+'" target="_blank" rel="noopener noreferrer">Steam</a>, <a href="'+T5+'" target="_blank" rel="noopener noreferrer">Steam</a>, <a href="'+T6+'" target="_blank" rel="noopener noreferrer">Steam</a>.</p></section>'+
-   '<section class="win"><div class="phead"><h2>Antes de cada boss</h2><span class="count" id="ccount">'+done+'/'+CHK.length+'</span></div>'+
-   CHK.map(function(t,i){var d=!!S.chk['c'+i];return '<label class="chk'+(d?' done':'')+'"><input type="checkbox" data-act="chk" data-id="c'+i+'"'+(d?' checked':'')+'><span>'+esc(t)+'</span></label>';}).join('')+
-   '<div class="row" style="margin-top:10px"><button class="btn" type="button" data-act="chk-reset">Limpar checklist</button></div></section>';
+   '<p class="small" style="margin-top:8px">Fontes: <a href="'+T3+'" target="_blank" rel="noopener noreferrer">Steam</a>, <a href="'+T2+'" target="_blank" rel="noopener noreferrer">Steam</a>, <a href="'+T5+'" target="_blank" rel="noopener noreferrer">Steam</a>, <a href="'+T6+'" target="_blank" rel="noopener noreferrer">Steam</a>.</p></details>';
 }
 
 /* ---------- Pacote ---------- */
@@ -1105,7 +1171,7 @@ function viewPacote(){
     var lbl=o[1]==='on'?'Ativa':(o[1]==='off'?'Fora':'Não se aplica');
     return '<tr><td>'+esc(o[0])+'</td><td class="'+o[1]+'">'+lbl+'</td><td>'+esc(o[2])+'</td></tr>';
   }).join('');
-  return '<section class="win"><h2>Opções da run</h2><div class="scroll"><table><thead><tr><th>Opção</th><th>Estado</th><th>Motivo</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+  return '<section class="win"><h2>Opções da run</h2><div class="scroll"><table><thead><tr><th>Opção</th><th>Estado</th><th>O que faz</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
    '<p class="small mute" style="margin-top:8px">Pela wiki, as opções só podem ser removidas numa igreja, nunca recolocadas.</p></section>'+
    '<section class="win"><h2>Tolerância da faixa</h2><div class="row"><button class="step" type="button" data-act="tol-" aria-label="Diminuir tolerância">−</button><span class="calib" id="tolv">±'+S.tol+'</span><button class="step" type="button" data-act="tol+" aria-label="Aumentar tolerância">+</button><span class="small mute" style="flex:1;min-width:180px">Menor é mais apertado. O padrão é ±2.</span></div></section>'+
    '<section class="win"><h2>Ajuste Dracônico por ato</h2><p class="small mute">Soma ao nível do Game8 (modo normal) para chegar à meta de cada capítulo. O padrão é 0 no Ato 1 e +4 no Ato 2: os relatos Dracônicos do Ato 1 ficam no nível do Game8 ou abaixo, e os do fim do Ato 2 ficam 4 a 7 acima (Mordegon 59–62 contra 55). É uma proposta minha, ajuste ao seu ritmo.</p>'+
@@ -1117,9 +1183,9 @@ function viewPacote(){
    '<div class="row" style="margin:8px 0"><button class="btn" type="button" data-act="copy">Copiar</button><span class="small mute" id="copymsg"></span></div>'+
    '<textarea id="imp" class="field" aria-label="Colar progresso para importar" placeholder="Cole aqui um backup para importar"></textarea>'+
    '<div class="row" style="margin-top:8px"><button class="btn" type="button" data-act="import">Importar</button><span class="small mute" id="impmsg"></span></div></section>'+
-   '<section class="win"><h2>Atalhos</h2><p class="small"><kbd>+</kbd> <kbd>−</kbd> mudam o nível · <kbd>1</kbd> a <kbd>5</kbd> trocam de aba · <kbd>/</kbd> busca receitas.</p></section>'+
+   '<section class="win"><h2>Atalhos</h2><p class="small"><kbd>+</kbd> <kbd>−</kbd> mudam o nível · <kbd>1</kbd> a <kbd>6</kbd> trocam de aba · <kbd>/</kbd> busca receitas.</p><p class="small mute" style="margin-top:6px">Versão do app: '+VER+'. Se este número não mudou depois de uma atualização, feche e abra o app mais uma vez.</p></section>'+
    '<section class="win"><h2>Fontes e confiança</h2><p class="small">Os níveis vêm de quatro fontes: o Game8 Japão (modo normal; tem o recomendado por capítulo e uma lista de níveis-alvo por boss, mais baixa, e nenhuma das duas cita o Dracônico), a lista por área de um jogador no Reddit (monstros mais fortes, que você enviou em prints porque o site não abre nesta sessão), relatos em threads da Steam e um guia do Twinfinite. A concordância entre elas aparece em cada capítulo. A regra de faixa, teto e calibragem é uma proposta minha. Receitas, opções e dados de Snooze e Sleeper Hit vêm da Dragon Quest Wiki.</p>'+
-   '<ul class="clean small"><li><a href="https://dragon-quest.org/wiki/Draconian_Quest" target="_blank" rel="noopener noreferrer">Wiki: Draconian Quest</a></li>'+
+   '<details class="late"><summary>Links das fontes</summary><ul class="clean small"><li><a href="https://dragon-quest.org/wiki/Draconian_Quest" target="_blank" rel="noopener noreferrer">Wiki: Draconian Quest</a></li>'+
    '<li><a href="https://dragon-quest.org/w/index.php?title=List_of_fun-size_forge_recipe_book_locations_in_Dragon_Quest_XI" target="_blank" rel="noopener noreferrer">Wiki: livros Fun-Size Forge</a></li>'+
    '<li><a href="https://www.gamerguides.com/dragon-quest-xi-echoes-of-an-elusive-age-definitive-edition/guide/fun-sized-forge" target="_blank" rel="noopener noreferrer">Gamer Guides: forja e receitas (ingredientes)</a></li>'+
    '<li><a href="https://dragon-quest.org/wiki/List_of_Items_in_Dragon_Quest_XI" target="_blank" rel="noopener noreferrer">Wiki: itens (cada material tem página própria)</a></li>'+
@@ -1132,7 +1198,7 @@ function viewPacote(){
    '<li><a href="https://game8.jp/dq11/165595" target="_blank" rel="noopener noreferrer">Game8 Japão: capítulo 17, Castelo Demoníaco do Céu (55)</a></li>'+
    '<li><a href="https://game8.jp/dq11/165850" target="_blank" rel="noopener noreferrer">Game8 Japão: pós-clear (cap. 19) e Calasmos (70+)</a></li>'+
    '<li><a href="https://www.reddit.com/r/dragonquest/comments/gb9t1v/dqxi_is_there_a_recommended_level_listguide_for/" target="_blank" rel="noopener noreferrer">Reddit: lista de níveis por área (prints enviados por você)</a></li>'+
-   '<li><a href="https://claude.ai/artifact/S6zW2rwazRjwZHWdGn8RMZ" target="_blank" rel="noopener noreferrer">Guia completo em documento</a></li></ul></section>'+
+   '</ul></details></section>'+
    '<section class="win"><h2>Zona de perigo</h2><div class="row"><button class="btn warn" type="button" data-act="reset" id="rstbtn">Apagar todo o progresso</button></div></section>';
 }
 
@@ -1167,6 +1233,9 @@ document.addEventListener('fullscreenchange',function(){if(ui.tab==='pacote')ref
 
 /* ---------- Eventos ---------- */
 function stepLevel(d){S.level=clamp(S.level+d,1,99);save();renderHud();if(ui.tab==='regua')refreshKeep();}
+var lvlT=0;
+function syncView(){clearTimeout(lvlT);if(ui.tab==='regua'&&ui.vl!==S.level)refreshKeep();}
+function schedView(){clearTimeout(lvlT);lvlT=setTimeout(syncView,250);}
 function refreshKeep(){var y=window.scrollY;showTab(ui.tab);window.scrollTo(0,y);}
 var rstTimer=0;
 document.addEventListener('click',function(e){
@@ -1184,10 +1253,13 @@ document.addEventListener('click',function(e){
   else if(a==='tag'){var i=ui.tags.indexOf(v);if(i>-1)ui.tags.splice(i,1);else ui.tags.push(v);syncChips();renderRecList();}
   else if(a==='rmode'){ui.rmode=v;showTab('regua');}
   else if(a==='chap'){S.chap=(S.chap===+id?0:+id);save();renderHud();refreshKeep();}
+  else if(a==='jump'){syncView();jumpTo(id);}
+  else if(a==='toc'){syncView();jumpTo('toc');}
+  else if(a==='me'){syncView();goMe(v==='hud');}
   else if(a==='mm'){ui.mm=v;ui.mlim=60;syncMat();renderMat();}
   else if(a==='mf'){ui.mf[v]=!ui.mf[v];ui.mlim=60;syncMat();renderMat();}
   else if(a==='ms'){ui.ms=v;syncMat();renderMat();}
-  else if(a==='noshop'){S.noshop=S.noshop?0:1;save();syncMat();renderMat();}
+  else if(a==='noshop'){S.semcomp=S.semcomp?0:1;save();syncMat();renderMat();}
   else if(a==='mmore'){ui.mlim+=60;renderMat();}
   else if(a==='mmon'){ui.mm='mon';ui.mq=v;ui.mlim=60;showTab('materiais');}
   else if(a==='mmat'){ui.mm='mat';ui.mq=v;showTab('materiais');}
@@ -1206,7 +1278,6 @@ document.addEventListener('click',function(e){
     else if(id==='fs'){try{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen();}catch(err){}}
     refreshKeep();
   }
-  else if(a==='sleep'){S.sleep=v;save();refreshKeep();}
   else if(a==='chk-reset'){S.chk={};save();refreshKeep();}
   else if(a==='calib-reset'){S.logs.forEach(function(l){l.on=false;});save();renderLogs();renderHud();}
   else if(a==='log-del'){S.logs=S.logs.filter(function(l){return l.id!==id;});save();renderLogs();renderHud();}
@@ -1234,13 +1305,13 @@ document.addEventListener('change',function(e){
   else if(a==='rec'){anchored(el,function(){if(el.checked)S.rec[id]=true;else delete S.rec[id];save();renderRecList();});}
   else if(a==='chk'){if(el.checked)S.chk[id]=true;else delete S.chk[id];save();refreshKeep();}
   else if(a==='hide'){ui.hide=el.checked;renderRecList();}
-  else if(el.id==='lvl'){var n=parseInt(el.value,10);if(isFinite(n)){S.level=clamp(n,1,99);save();}el.value=S.level;renderHud();if(ui.tab==='regua')refreshKeep();}
+  else if(el.id==='lvl'){var n=parseInt(el.value,10);if(isFinite(n)){S.level=clamp(n,1,99);save();}if(!isFinite(n)||el.value!==String(S.level)){el.value=S.level;renderHud();}schedView();}
 });
 document.addEventListener('input',function(e){
   var el=e.target;
   if(el.id==='rq'){ui.q=el.value;renderRecList();}
   else if(el.id==='mq'){ui.mq=el.value;ui.mlim=60;renderMat();}
-  else if(el.id==='lvl'){var n=parseInt(el.value,10);if(isFinite(n)&&n>=1&&n<=99){S.level=n;save();renderHud();}}
+  else if(el.id==='lvl'){var n=parseInt(el.value,10);if(isFinite(n)&&n>=1&&n<=99){S.level=n;save();renderHud();schedView();}}
 });
 document.addEventListener('toggle',function(e){
   var d=e.target;
